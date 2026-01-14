@@ -1,0 +1,137 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  CUDA_ARCHS: "60;70;75;86;89;120"
+  BUILD_TYPE: Release
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ["13.1.0", "12.8.0", "11.8.0"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.30
+        id: cuda
+        with:
+          cuda: ${{ matrix.cuda }}
+          method: network
+          sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
+          log-file-suffix: "linux-cuda${{ matrix.cuda }}.txt"
+
+      - name: Verify CUDA installation
+        run: |
+          nvcc --version
+          echo "CUDA_PATH=$CUDA_PATH"
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_CUDA_ARCHITECTURES="${{ env.CUDA_ARCHS }}"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package binary
+        run: |
+          tar -C build -czf build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz gpu-burn
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: gpu-burn-linux-cuda${{ matrix.cuda }}
+          path: build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ["13.1.0", "12.8.0", "11.8.0"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.30
+        id: cuda
+        with:
+          cuda: ${{ matrix.cuda }}
+          method: network
+          sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
+          log-file-suffix: "windows-cuda${{ matrix.cuda }}.txt"
+
+      - name: Verify CUDA installation
+        shell: pwsh
+        run: |
+          nvcc --version
+          "CUDA_PATH=$env:CUDA_PATH"
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_CUDA_ARCHITECTURES="${{ env.CUDA_ARCHS }}"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Package binary
+        shell: pwsh
+        run: |
+          $exe = if (Test-Path build/Release/gpu-burn.exe) { "build/Release/gpu-burn.exe" } else { "build/gpu-burn.exe" }
+          Compress-Archive -Path $exe -DestinationPath build/gpu-burn-windows-cuda${{ matrix.cuda }}.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: gpu-burn-windows-cuda${{ matrix.cuda }}
+          path: build/gpu-burn-windows-cuda${{ matrix.cuda }}.zip
+
+  release-assets:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-slim
+    needs: [build-linux, build-windows]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+
+      - name: List artifacts
+        run: ls -R dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: GPU-Burn ${{ github.ref_name }}
+          files: |
+            dist/**/*.tar.gz
+            dist/**/*.zip
+          body: |
+            GPU-Burn prebuilt binaries for CUDA versions 11.8–13.1.
+
+            **Includes:**
+            - Linux: `gpu-burn-linux-cuda*.tar.gz`
+            - Windows: `gpu-burn-windows-cuda*.zip`
+
+            Built from commit ${{ github.sha }}.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

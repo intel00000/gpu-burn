@@ -1,88 +1,134 @@
-# gpu-burn
+# GPU-Burn
 
-Multi-GPU CUDA stress test
-<http://wili.cc/blog/gpu-burn.html>
+A multi-GPU CUDA stress testing tool with monitoring and multiple modes.
 
-- [gpu-burn](#gpu-burn)
-  - [Easy docker build and run](#easy-docker-build-and-run)
-  - [Binary packages](#binary-packages)
-  - [Building](#building)
-  - [Usage](#usage)
+## Features
 
-## Easy docker build and run
-
-```plain
-git clone https://github.com/wilicc/gpu-burn
-cd gpu-burn
-docker build -t gpu_burn .
-docker run --rm --gpus all gpu_burn
-```
-
-## Binary packages
-
-<https://repology.org/project/gpu-burn/versions>
+- **Multiple Modes**: GEMM (matrix multiply), Compute (ALU+SFU), Memory (bandwidth + random access)
+- **GPU Monitoring**: Temperature, power, clocks, and throttling detection via NVML
+- **Multi-GPU Support**: Test all GPUs simultaneously with independent error tracking
+- **Configurable Parameters**: Matrix sizes, memory usage, precision (FP32/FP64), tensor cores
+- **Cross-Platform**: Windows and Linux support
 
 ## Building
 
-To build GPU Burn:
+### Prerequisites
 
-`make`
+- CMake 3.24+
+- CUDA Toolkit 11.0+
+- NVML library (included with NVIDIA drivers)
 
-To remove artifacts built by GPU Burn:
+### Build Instructions
 
-`make clean`
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
+```
 
-GPU Burn builds with a default Compute Capability of 7.5 as specified on NVIDIA's [CUDA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
-To override this with a different value:
-
-`make COMPUTE=<compute capability value>`
-
-CFLAGS can be added when invoking make to add to the default
-list of compiler flags:
-
-`make CFLAGS=-Wall`
-
-LDFLAGS can be added when invoking make to add to the default
-list of linker flags:
-
-`make LDFLAGS=-lmylib`
-
-NVCCFLAGS can be added when invoking make to add to the default
-list of nvcc flags:
-
-`make NVCCFLAGS=-ccbin <path to host compiler>`
-
-CUDAPATH can be added to point to a non standard install or
-specific version of the cuda toolkit (default is
-/usr/local/cuda):
-
-`make CUDAPATH=/usr/local/cuda-<version>`
-
-CCPATH can be specified to point to a specific gcc (default is
-/usr/bin):
-
-`make CCPATH=/usr/local/bin`
-
-CUDA_VERSION and IMAGE_DISTRO can be used to override the base
-images used when building the Docker `image` target, while IMAGE_NAME
-can be set to change the resulting image tag:
-
-`make IMAGE_NAME=myregistry.private.com/gpu-burn CUDA_VERSION=12.0.1 IMAGE_DISTRO=ubuntu22.04 image`
+The executable will be in `build/gpu-burn` (Linux) or `build/Release/gpu-burn.exe` (Windows).
 
 ## Usage
 
-```plain
-    GPU Burn
-    Usage: gpu_burn [OPTIONS] [TIME]
-    
-    -m X   Use X MB of memory
-    -m N%  Use N% of the available GPU memory
-    -d     Use doubles
-    -tc    Try to use Tensor cores (if available)
-    -l     List all GPUs in the system
-    -i N   Execute only on GPU N
-    -h     Show this help message
-    
-    Example:
-    gpu_burn -d 3600
+```bash
+# Basic usage - test all GPUs for 60 seconds
+gpu-burn 60
+
+# Use 90% of GPU memory instead of default 80%
+gpu-burn -m 90% 300
+
+# Test specific GPU
+gpu-burn -i 0 120
+
+# Verbose monitoring with detailed metrics
+gpu-burn -v 60
+
+# Different stress modes
+gpu-burn -mode compute 120     # ALU+SFU compute stress
+gpu-burn -mode memory 120      # Memory bandwidth stress
+gpu-burn -mode gemm 120        # Matrix multiply stress (default)
+
+# Larger matrices for maximum stress
+gpu-burn -s 16384 300
+
+# Double precision (FP64)
+gpu-burn -d 300
+
+# Try tensor cores (if supported)
+gpu-burn -tc 300
 ```
+
+### Command-Line Options
+
+| Option | Description |
+|--------|-------------|
+| `-m X` | Use X MB of GPU memory |
+| `-m N%` | Use N% of available GPU memory (default: 80%) |
+| `-s N` | Matrix size NxN for GEMM mode (default: 8192, must be multiple of 256) |
+| `-mode M` | Stress mode: `gemm`, `compute`, `memory` (default: `gemm`) |
+| `-d` | Use double precision (FP64) |
+| `-tc` | Use tensor cores (only in GEMM mode; uses TF32 for FP32, requires Ampere+) |
+| `-l` | List GPUs and exit |
+| `-i N` | Test GPU index N only (0-based) |
+| `-v` | Verbose output |
+| `-h` | Show help |
+
+## Stress Modes
+
+### GEMM Mode (default)
+
+Matrix multiplication stress using cuBLAS. `-s` option controls matrix size.
+
+### Compute Mode
+
+ALU and SFU (Special Function Unit) stress with minimal memory bandwidth requirements.
+
+### Memory Mode
+
+Memory stress testing with four patterns that cycle continuously (not well designed currently):
+
+1. **Sequential Access** (with validation): Coalesced memory reads/writes
+2. **Random Access** (read-only): Random memory access
+3. **Stride Access** (read-only): Strided access to cause thrashing
+4. **PCIe Transfer** (with validation): Host-Device transfers
+
+## Monitoring Output
+
+### Normal Mode
+
+Use the same output format from the original gpu-burn:
+
+```
+89.2%  proc'd: 1234 (7823.5 Gflop/s)  errors: 0  72C 245W
+```
+
+Shows: Progress %, iterations processed, performance, errors, temperature, power, throttling indicator (!)
+
+### Verbose Mode
+
+```
+89.2%  proc'd: 1234 (7823.5 Gflop/s)  errors: 0
+GPU 0: 72C  245W  SM:1890MHz  Mem:5001MHz
+```
+
+Shows: Detailed per-GPU metrics including clock speeds and throttling reasons
+
+## Error Detection
+
+All modes include built-in validation (not exhaustive):
+
+- **GEMM mode**: Compares matrix multiplication results against reference
+- **Compute mode**: Validates ALU and SFU computation consistency
+- **Memory mode**: Validates sequential and PCIe patterns every 4th iteration
+
+## License
+
+MIT License - See [LICENSE](LICENSE) file
+
+## Credits
+
+Based on the original [gpu-burn](https://github.com/wilicc/gpu-burn), rewritten with:
+
+- NVML integration for real-time monitoring
+- Multiple stress modes (GEMM, Compute, Memory)
+- Cross-platform support (Windows/Linux)
