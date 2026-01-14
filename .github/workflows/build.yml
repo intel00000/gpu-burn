@@ -7,16 +7,16 @@ on:
   workflow_dispatch:
 
 env:
-  CUDA_ARCHS: "60;70;75;86;89;120"
+  CUDA_ARCHS: "75;86;89;120"
   BUILD_TYPE: Release
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        cuda: ["13.1.0", "12.8.0", "11.8.0"]
+        cuda: ["13.1.1", "12.8.1", "11.8.0"]
 
     steps:
       - uses: actions/checkout@v6
@@ -55,11 +55,11 @@ jobs:
           path: build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
-        cuda: ["13.1.0", "12.8.0", "11.8.0"]
+        cuda: ["13.1.1", "12.8.1", "11.8.0"]
 
     steps:
       - uses: actions/checkout@v6
