@@ -77,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cuda: ["13.1.0", "12.8.1", "11.8.0"]
+        cuda: ["13.1.0", "12.8.1"]
 
     steps:
       - uses: actions/checkout@v6
@@ -111,7 +111,8 @@ jobs:
         run: |
           cmake -S . -B build `
             -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" `
-            -DCMAKE_CUDA_ARCHITECTURES="$env:CUDA_ARCHS"
+            -DCMAKE_CUDA_ARCHITECTURES="$env:CUDA_ARCHS" `
+            -DCMAKE_CUDA_FLAGS="-Xcompiler=/Zc:preprocessor"
 
       - name: Build
         shell: pwsh
@@ -120,14 +121,15 @@ jobs:
       - name: Package binary
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path dist
           $exe = if (Test-Path build/Release/gpu-burn.exe) { "build/Release/gpu-burn.exe" } else { "build/gpu-burn.exe" }
-          Compress-Archive -Path $exe -DestinationPath build/gpu-burn-windows-cuda${{ matrix.cuda }}.zip -Force
+          Copy-Item $exe -Destination "dist/gpu-burn-windows-cuda${{ matrix.cuda }}.exe"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
           name: gpu-burn-windows-cuda${{ matrix.cuda }}
-          path: build/gpu-burn-windows-cuda${{ matrix.cuda }}.zip
+          path: dist/gpu-burn-windows-cuda${{ matrix.cuda }}.exe
 
   release-assets:
     if: github.ref_type == 'tag'
@@ -151,13 +153,13 @@ jobs:
           name: GPU-Burn ${{ github.ref_name }}
           files: |
             dist/**/*.tar.gz
-            dist/**/*.zip
+            dist/**/*.exe
           body: |
-            GPU-Burn prebuilt binaries for CUDA versions 11.8–13.1.
+            GPU-Burn prebuilt binaries.
 
             Includes:
-            - Linux: gpu-burn-linux-cuda*.tar.gz
-            - Windows: gpu-burn-windows-cuda*.zip
+            - Linux: CUDA 11.8, 12.8, 13.1
+            - Windows: CUDA 12.8, 13.1
 
             Built from commit ${{ github.sha }}.
         env:

@@ -76,7 +76,7 @@ static void list_gpus() {
         size_t free_b = 0, total_b = 0;
         cuda_check(cudaSetDevice(i), "cudaSetDevice");
         cuda_check(cudaMemGetInfo(&free_b, &total_b), "cudaMemGetInfo");
-        std::printf("ID %d: %s, cc %d.%d, VRAM %zu MB (free %zu MB)\n", i,
+        std::printf("ID %d: %s, cc %d.%d, VRAM %llu MB (free %llu MB)\n", i,
                     prop.name, prop.major, prop.minor,
                     total_b / 1024ull / 1024ull, free_b / 1024ull / 1024ull);
     }

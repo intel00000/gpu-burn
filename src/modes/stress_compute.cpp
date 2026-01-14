@@ -48,7 +48,7 @@ void StressCompute<T>::init(DeviceContext &dev, const StressConfig &cfg) {
     if (elements_ < 1024)
         throw std::runtime_error("Not enough VRAM for compute stress buffers");
     std::printf(
-        "GPU %d init: compute stress, %zu elements/half, ~%zu MB total\n",
+        "GPU %d init: compute stress, %zu elements/half, ~%llu MB total\n",
         dev.device_id, elements_, buffer_bytes_ / 1024ull / 1024ull);
 
     cuda_check(cudaSetDevice(dev.device_id), "cudaSetDevice(init)");

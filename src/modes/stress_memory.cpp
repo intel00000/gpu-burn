@@ -63,8 +63,8 @@ void StressMemory<T>::init(DeviceContext &dev, const StressConfig &cfg) {
                              : kMaxPCIeBufferBytes;
     stride_ = (elements_ / 64) + 997;
 
-    std::printf("GPU %d init: memory stress, %zu elements, ~%zu MB total "
-                "(PCIe: %zu MB)\n",
+    std::printf("GPU %d init: memory stress, %zu elements, ~%llu MB total "
+                "(PCIe: %llu MB)\n",
                 dev.device_id, elements_,
                 (2 * buffer_bytes_) / 1024ull / 1024ull,
                 pcie_buffer_bytes_ / 1024ull / 1024ull);
