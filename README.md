@@ -121,10 +121,6 @@ All modes include built-in validation (not exhaustive):
 - **Compute mode**: Validates ALU and SFU computation consistency
 - **Memory mode**: Validates sequential and PCIe patterns every 4th iteration
 
-## License
-
-MIT License - See [LICENSE](LICENSE) file
-
 ## Credits
 
 Based on the original [gpu-burn](https://github.com/wilicc/gpu-burn), rewritten with:

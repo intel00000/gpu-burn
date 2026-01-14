@@ -1,6 +1,7 @@
 // gpuburn/config.h
 // Configuration constants
 #pragma once
+#include <cstddef>
 
 // Default memory usage fraction
 constexpr double kDefaultUseMemFrac = 0.90;

@@ -98,7 +98,6 @@ jobs:
         with:
           cuda: ${{ matrix.cuda }}
           method: network
-          sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
           log-file-suffix: "windows-cuda${{ matrix.cuda }}.txt"
 
       - name: Verify CUDA installation

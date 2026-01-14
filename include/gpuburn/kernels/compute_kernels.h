@@ -1,6 +1,7 @@
 // compute_kernels.h
 #pragma once
 #include <cstddef>
+#include <cstdint>
 #include <cuda_runtime.h>
 
 namespace gpuburn {
