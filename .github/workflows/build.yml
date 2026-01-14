@@ -11,9 +11,9 @@ env:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         cuda: ["13.1.0", "12.8.1", "11.8.0"]
 
@@ -32,19 +32,18 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.20
         with:
-          key: ${{ runner.os }}-cuda${{ matrix.cuda }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}
+          key: ${{ runner.os }}-cuda${{ matrix.cuda }}-${{ env.BUILD_TYPE }}
           restore-keys: |
-            ${{ runner.os }}-cuda${{ matrix.cuda }}-${{ env.BUILD_TYPE }}-
-              ${{ runner.os }}-cuda${{ matrix.cuda }}-
-          max-size: 500M
+            ${{ runner.os }}-cuda${{ matrix.cuda }}-
+          max-size: 1G
 
-      - name: Install CUDA Toolkit
+      - name: Install CUDA Toolkit (network)
         uses: Jimver/cuda-toolkit@v0.2.30
         id: cuda
         with:
           cuda: ${{ matrix.cuda }}
-          method: local
-          linux-local-args: '["--toolkit"]'
+          method: network
+          sub-packages: '["toolkit","nvml-dev"]'
           log-file-suffix: "linux-cuda${{ matrix.cuda }}.txt"
 
       - name: Verify CUDA installation
@@ -66,6 +65,7 @@ jobs:
       - name: Package binary
         run: |
           tar -czf build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz -C build gpu-burn
+
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
@@ -73,9 +73,9 @@ jobs:
           path: build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         cuda: ["13.1.0", "12.8.1", "11.8.0"]
 
@@ -97,7 +97,7 @@ jobs:
         id: cuda
         with:
           cuda: ${{ matrix.cuda }}
-          method: local
+          method: network
           sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
           log-file-suffix: "windows-cuda${{ matrix.cuda }}.txt"
 
@@ -156,9 +156,9 @@ jobs:
           body: |
             GPU-Burn prebuilt binaries for CUDA versions 11.8–13.1.
 
-            **Includes:**
-            - Linux: `gpu-burn-linux-cuda*.tar.gz`
-            - Windows: `gpu-burn-windows-cuda*.zip`
+            Includes:
+            - Linux: gpu-burn-linux-cuda*.tar.gz
+            - Windows: gpu-burn-windows-cuda*.zip
 
             Built from commit ${{ github.sha }}.
         env:
