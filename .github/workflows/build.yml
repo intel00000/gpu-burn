@@ -7,27 +7,44 @@ on:
   workflow_dispatch:
 
 env:
-  CUDA_ARCHS: "75;86;89;120"
   BUILD_TYPE: Release
 
 jobs:
   build-linux:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        cuda: ["13.1.1", "12.8.1", "11.8.0"]
+        cuda: ["13.1.0", "12.8.1", "11.8.0"]
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Select CUDA arch list
+        run: |
+          CUDA="${{ matrix.cuda }}"
+          if [[ "$CUDA" == 13.* ]]; then
+            echo 'CUDA_ARCHS=75;86;89;120' >> "$GITHUB_ENV"
+          else
+            echo 'CUDA_ARCHS=75;86;89' >> "$GITHUB_ENV"
+          fi
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2.20
+        with:
+          key: ${{ runner.os }}-cuda${{ matrix.cuda }}-${{ env.BUILD_TYPE }}-${{ github.ref_name }}
+          restore-keys: |
+            ${{ runner.os }}-cuda${{ matrix.cuda }}-${{ env.BUILD_TYPE }}-
+              ${{ runner.os }}-cuda${{ matrix.cuda }}-
+          max-size: 500M
 
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.30
         id: cuda
         with:
           cuda: ${{ matrix.cuda }}
-          method: network
-          sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
+          method: local
+          linux-local-args: '["--toolkit"]'
           log-file-suffix: "linux-cuda${{ matrix.cuda }}.txt"
 
       - name: Verify CUDA installation
@@ -38,16 +55,17 @@ jobs:
       - name: Configure CMake
         run: |
           cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_CUDA_ARCHITECTURES="${{ env.CUDA_ARCHS }}"
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS}" \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache
 
       - name: Build
         run: cmake --build build --parallel
 
       - name: Package binary
         run: |
-          tar -C build -czf build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz gpu-burn
-
+          tar -czf build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz -C build gpu-burn
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
@@ -55,21 +73,31 @@ jobs:
           path: build/gpu-burn-linux-cuda${{ matrix.cuda }}.tar.gz
 
   build-windows:
-    runs-on: windows-2022
+    runs-on: windows-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        cuda: ["13.1.1", "12.8.1", "11.8.0"]
+        cuda: ["13.1.0", "12.8.1", "11.8.0"]
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Select CUDA arch list
+        shell: pwsh
+        run: |
+          $cuda = "${{ matrix.cuda }}"
+          if ($cuda -like "13.*") {
+            "CUDA_ARCHS=75;86;89;120" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          } else {
+            "CUDA_ARCHS=75;86;89" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          }
 
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.30
         id: cuda
         with:
           cuda: ${{ matrix.cuda }}
-          method: network
+          method: local
           sub-packages: '["nvcc","cudart","cublas","curand","nvml"]'
           log-file-suffix: "windows-cuda${{ matrix.cuda }}.txt"
 
@@ -83,8 +111,8 @@ jobs:
         shell: pwsh
         run: |
           cmake -S . -B build `
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
-            -DCMAKE_CUDA_ARCHITECTURES="${{ env.CUDA_ARCHS }}"
+            -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" `
+            -DCMAKE_CUDA_ARCHITECTURES="$env:CUDA_ARCHS"
 
       - name: Build
         shell: pwsh
