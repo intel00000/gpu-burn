@@ -155,12 +155,40 @@ jobs:
             dist/**/*.tar.gz
             dist/**/*.exe
           body: |
-            GPU-Burn prebuilt binaries.
+            ## GPU-Burn - CUDA Stress Test
 
-            Includes:
-            - Linux: CUDA 11.8, 12.8, 13.1
-            - Windows: CUDA 12.8, 13.1
+            A GPU testing tool with NVML monitoring, modes (GEMM, Compute, Memory), and cross-platform support.
 
-            Built from commit ${{ github.sha }}.
+            ### Downloads
+
+            Binaries are **dynamically linked** - download the version matching your installed CUDA toolkit.
+
+            | Platform | CUDA Version | File |
+            | ---------- | -------------- | ------ |
+            | Linux | 13.1 | `gpu-burn-linux-cuda13.1.0.tar.gz` |
+            | Linux | 12.8 | `gpu-burn-linux-cuda12.8.1.tar.gz` |
+            | Linux | 11.8 | `gpu-burn-linux-cuda11.8.0.tar.gz` |
+            | Windows | 13.1 | `gpu-burn-windows-cuda13.1.0.exe` |
+            | Windows | 12.8 | `gpu-burn-windows-cuda12.8.1.exe` |
+
+            Check your CUDA version: `nvcc --version` or `nvidia-smi`
+
+            ### Quick Start
+
+            ```bash
+            # Run stress test for 60 seconds
+            ./gpu-burn 60
+
+            # With verbose monitoring
+            ./gpu-burn -v 120
+
+            # Compute stress mode
+            ./gpu-burn -mode compute 60
+
+            # Memory stress mode
+            ./gpu-burn -mode memory 60
+            ```
+
+            See [README](https://github.com/intel00000/gpu-burn#readme) for full documentation.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

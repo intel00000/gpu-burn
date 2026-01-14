@@ -26,7 +26,17 @@ cmake ..
 cmake --build . --config Release
 ```
 
-The executable will be in `build/gpu-burn` (Linux) or `build/Release/gpu-burn.exe` (Windows).
+## Prebuilt Binaries
+
+Download from [Releases](https://github.com/intel00000/gpu-burn/releases). Binaries are dynamically linked and require matching CUDA installed, check your version with `nvcc --version` or `nvidia-smi`.
+
+| Binary | Requires |
+| -------- | ---------- |
+| `gpu-burn-linux-cuda13.1.0.tar.gz` | CUDA 13.1 |
+| `gpu-burn-linux-cuda12.8.1.tar.gz` | CUDA 12.8 |
+| `gpu-burn-linux-cuda11.8.0.tar.gz` | CUDA 11.8 |
+| `gpu-burn-windows-cuda13.1.0.exe` | CUDA 13.1 |
+| `gpu-burn-windows-cuda12.8.1.exe` | CUDA 12.8 |
 
 ## Usage
 
@@ -61,7 +71,7 @@ gpu-burn -tc 300
 ### Command-Line Options
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `-m X` | Use X MB of GPU memory |
 | `-m N%` | Use N% of available GPU memory (default: 80%) |
 | `-s N` | Matrix size NxN for GEMM mode (default: 8192, must be multiple of 256) |
@@ -98,7 +108,7 @@ Memory stress testing with four patterns that cycle continuously (not well desig
 
 Use the same output format from the original gpu-burn:
 
-```
+```text
 89.2%  proc'd: 1234 (7823.5 Gflop/s)  errors: 0  72C 245W
 ```
 
@@ -106,7 +116,7 @@ Shows: Progress %, iterations processed, performance, errors, temperature, power
 
 ### Verbose Mode
 
-```
+```text
 89.2%  proc'd: 1234 (7823.5 Gflop/s)  errors: 0
 GPU 0: 72C  245W  SM:1890MHz  Mem:5001MHz
 ```
